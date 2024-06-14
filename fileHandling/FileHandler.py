@@ -5,7 +5,6 @@ from typing import Dict
 from helpers.Logger import Logger
 from utils import Nip
 
-
 class FileHandler:
     def __init__(self, path: str, pathToSource: str, logger: Logger):
         '''
