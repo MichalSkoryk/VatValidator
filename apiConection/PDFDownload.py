@@ -2,7 +2,6 @@ from time import sleep
 from typing import Dict
 
 import pyautogui
-import selenium.webdriver
 
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
@@ -32,9 +31,14 @@ def downloadPdfForNipNumber(driver, country: str, nip: str, logger: Logger, file
     except :
         print('Could not find Important Disclaimer close button')
 
-    wait = WebDriverWait(driver, timeout=2, poll_frequency=0.5 ,ignored_exceptions=[
-        NoSuchElementException,ElementNotInteractableException, StaleElementReferenceException])
-    wait.until(lambda d: driver.find_element(By.CLASS_NAME, 'center-form').is_displayed())
+    try:
+        wait = WebDriverWait(driver, timeout=2, poll_frequency=0.5 ,ignored_exceptions=[
+            NoSuchElementException,ElementNotInteractableException, StaleElementReferenceException])
+        wait.until(lambda d: driver.find_element(By.CLASS_NAME, 'center-form').is_displayed())
+    except:
+        driver.refresh()
+        driver.implicitly_wait(6)
+
 
     centrumForm = driver.find_element(By.CLASS_NAME, 'center-form')
 
@@ -111,11 +115,14 @@ def downloadPdfForNips(nips: Dict[str, Nip], logger: Logger, fileHandler: FileHa
                     nip].number, logger, fileHandler)
             except TimeoutError:
                 driver.refresh()
+                sleep(3)
                 driver.implicitly_wait(2)
-                print(f'nip country: {nips[nip].country} nip number: {nips[nip].number}')
-                downloadPdfForNipNumber(driver, nips[nip].country, nips[
-                    nip].number, logger, fileHandler)
-
+                try:
+                    print(f'nip country: {nips[nip].country} nip number: {nips[nip].number}')
+                    downloadPdfForNipNumber(driver, nips[nip].country, nips[
+                        nip].number, logger, fileHandler)
+                except TimeoutError:
+                    logger.info(f'nip: {nip} screenshot download was not successful')
             # press back button to comeback to form
             backButton = driver.find_element(By.CLASS_NAME, 'ecl-button--secondary')
             backButton.click()
