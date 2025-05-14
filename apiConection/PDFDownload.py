@@ -7,8 +7,7 @@ from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
-from selenium.common import NoSuchElementException, ElementNotInteractableException, StaleElementReferenceException
-
+from selenium.common import NoSuchElementException, ElementNotInteractableException, StaleElementReferenceException, TimeoutException
 from fileHandling.FileHandler import FileHandler
 from helpers.Logger import Logger
 from utils import State, Nip
@@ -31,14 +30,9 @@ def downloadPdfForNipNumber(driver, country: str, nip: str, logger: Logger, file
     except :
         print('Could not find Important Disclaimer close button')
 
-    try:
-        wait = WebDriverWait(driver, timeout=2, poll_frequency=0.5 ,ignored_exceptions=[
-            NoSuchElementException,ElementNotInteractableException, StaleElementReferenceException])
-        wait.until(lambda d: driver.find_element(By.CLASS_NAME, 'center-form').is_displayed())
-    except:
-        driver.refresh()
-        driver.implicitly_wait(6)
-
+    wait = WebDriverWait(driver, timeout=60, poll_frequency=0.2 ,ignored_exceptions=[
+        NoSuchElementException,ElementNotInteractableException, StaleElementReferenceException, TimeoutException])
+    wait.until(lambda d: driver.find_element(By.CLASS_NAME, 'center-form').is_displayed())
 
     centrumForm = driver.find_element(By.CLASS_NAME, 'center-form')
 
@@ -49,7 +43,7 @@ def downloadPdfForNipNumber(driver, country: str, nip: str, logger: Logger, file
 
     # find nip input
     centrumFormChildren = centrumForm.find_elements(By.TAG_NAME,'div')
-    secondDiv = centrumFormChildren[3]
+    secondDiv = centrumFormChildren[2]
     nipInput = secondDiv.find_element(By.TAG_NAME, 'input')
 
     # enter nip number
@@ -64,9 +58,10 @@ def downloadPdfForNipNumber(driver, country: str, nip: str, logger: Logger, file
     submitBtn.click()
 
     # wait for site to
-    wait = WebDriverWait(driver, timeout=2, poll_frequency=0.5, ignored_exceptions=[
-        NoSuchElementException,ElementNotInteractableException, StaleElementReferenceException])
+    wait = WebDriverWait(driver, timeout=60, poll_frequency=0.2, ignored_exceptions=[
+        NoSuchElementException,ElementNotInteractableException, StaleElementReferenceException, TimeoutException])
     wait.until(lambda d: driver.find_element(By.CLASS_NAME, 'text-result').is_displayed())
+
     resultText = driver.find_element(By.CLASS_NAME, 'text-result')
 
     if(resultText.text[:3] != 'Yes'):
@@ -74,7 +69,7 @@ def downloadPdfForNipNumber(driver, country: str, nip: str, logger: Logger, file
 
     #scroll down for better view
     driver.execute_script("window.scrollBy(0, 250)")
-    sleep(0.25)
+    sleep(0.5)
     pyautogui.screenshot(f'{fileHandler.pathToScreenshotFolder()}/{nip}.png')
 
 def downloadPdfForNips(nips: Dict[str, Nip], logger: Logger, fileHandler: FileHandler):
@@ -94,8 +89,8 @@ def downloadPdfForNips(nips: Dict[str, Nip], logger: Logger, fileHandler: FileHa
     driver.get(url)
 
     # accept cookies
-    wait = WebDriverWait(driver, timeout=2,  poll_frequency=0.5 ,ignored_exceptions=[
-        NoSuchElementException,ElementNotInteractableException, StaleElementReferenceException])
+    wait = WebDriverWait(driver, timeout=15,  poll_frequency=1 ,ignored_exceptions=[
+        NoSuchElementException,ElementNotInteractableException, StaleElementReferenceException, TimeoutException])
     wait.until(lambda d:  driver.find_element(By.CLASS_NAME, 'ecl-message__close').is_displayed())
 
     acceptCookies = driver.find_element(By.LINK_TEXT, 'Accept only essential cookies')
@@ -113,15 +108,15 @@ def downloadPdfForNips(nips: Dict[str, Nip], logger: Logger, fileHandler: FileHa
             try:
                 downloadPdfForNipNumber(driver, nips[nip].country, nips[
                     nip].number, logger, fileHandler)
-            except TimeoutError:
+            except selenium.common.exceptions.TimeoutException:
+                print(f'first error for nip country: {nips[nip].country} nip number: {nips[nip].number}')
                 driver.refresh()
-                sleep(3)
-                driver.implicitly_wait(2)
+                sleep(10)
                 try:
                     print(f'nip country: {nips[nip].country} nip number: {nips[nip].number}')
                     downloadPdfForNipNumber(driver, nips[nip].country, nips[
                         nip].number, logger, fileHandler)
-                except TimeoutError:
+                except selenium.common.exceptions.TimeoutException:
                     logger.info(f'nip: {nip} screenshot download was not successful')
             # press back button to comeback to form
             backButton = driver.find_element(By.CLASS_NAME, 'ecl-button--secondary')

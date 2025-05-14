@@ -117,7 +117,7 @@ class NipCheck:
         countryMap = {
             'AT': r'^U\d{8}',
             'BE': r'^0\d{9}',
-            'BG': r'^\d{9, 10}', # fortmat good why not working?
+            'BG': r'^\d{9,10}', # fortmat good why not working?
             'HR': r'^\d{11}',
             'CY': r'^\d{8}[A-Z]',
             'CZ': r'^\d{8,10}',
